@@ -14,6 +14,15 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 options(width = 92)
+
+# Render data frames as tables. `df_print: kable` above covers the vignette
+# that R CMD build ships; pkgdown uses its own output format and ignores it,
+# so register the method directly and both renders agree.
+knit_print.data.frame <- function(x, ...) {
+  knitr::asis_output(paste(c("", knitr::kable(x)), collapse = "\n"))
+}
+registerS3method("knit_print", "data.frame", knit_print.data.frame,
+                 envir = asNamespace("knitr"))
 ```
 
 > Ranking rows by how close they are to an idea.
@@ -57,6 +66,12 @@ Compare that with the unstemmed version to see what the stemmer is doing:
 ```{r tokenize-nostem}
 jtb_tokenize("Subject reported a severe HEADACHE after dosing.", stem = FALSE)
 ```
+
+Which stemmer runs depends on your library: `SnowballC::wordStem()` when that
+package is installed, and a small built-in suffix stripper otherwise. The two
+do not always agree, so scores can shift slightly between machines that differ
+on it — the *ranking* is stable, the third decimal place is not. Install
+`SnowballC` on every machine that needs identical numbers.
 
 The tokens are then compared by **TF-IDF cosine similarity**. The IDF half is
 what makes this better than counting shared words: a term that appears in

@@ -1,0 +1,5 @@
+# Minimal pkgdown config. The site exists so the vignettes can be rendered and
+# read locally; Bootstrap 5 is set explicitly because pkgdown's default without
+# this field is the legacy Bootstrap 3 template.
+template:
+  bootstrap: 5

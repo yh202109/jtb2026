@@ -1,5 +1,6 @@
-^doc$
-^Meta$
+^docs$
+^_pkgdown\.yml$
+^pkgdown$
 ^ci$
 ^data-raw$
 ^\.github$

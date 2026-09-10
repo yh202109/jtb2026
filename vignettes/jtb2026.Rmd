@@ -14,6 +14,15 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 options(width = 92)
+
+# Render data frames as tables. `df_print: kable` above covers the vignette
+# that R CMD build ships; pkgdown uses its own output format and ignores it,
+# so register the method directly and both renders agree.
+knit_print.data.frame <- function(x, ...) {
+  knitr::asis_output(paste(c("", knitr::kable(x)), collapse = "\n"))
+}
+registerS3method("knit_print", "data.frame", knit_print.data.frame,
+                 envir = asNamespace("knitr"))
 ```
 
 > Find the rows of a table that mention what you are looking for.

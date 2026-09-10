@@ -9,6 +9,7 @@ on:
       - 'data/**'
       - 'inst/extdata/**'
       - 'DESCRIPTION'
+      - '_pkgdown.yml'
       - 'ci/build-vignettes.sh'
       - '.github/workflows/vignettes.yaml'
   pull_request:
@@ -43,7 +44,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::devtools, any::remotes
+          extra-packages: any::pkgdown
           needs: check
 
       # Every code block in vignettes/*.Rmd runs against the freshly built
@@ -56,5 +57,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vignettes-html
-          path: doc
+          path: docs/articles
           retention-days: 14

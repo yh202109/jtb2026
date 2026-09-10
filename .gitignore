@@ -5,8 +5,6 @@
 *.Rproj
 .DS_Store
 .quarto/
-/doc/
-/Meta/
 check/
 vignettes/*.html
 vignettes/*_files/

@@ -75,9 +75,9 @@ jtb_search_semantic(site_reports, "stomach upset", columns = "comment", top_n = 
 
 ```
    report_id   term comment                                            .score .rank
-9       R009 Nausea Stomach felt unsettled after each dose ...        0.531145     1
-24      R024 Nausea Reported feeling sick to the stomach ...          0.376922     2
-17      R017 Nausea Nauseous most mornings this cycle ...             0.126427     3
+9       R009 Nausea Stomach felt unsettled after each dose ...        0.533332     1
+24      R024 Nausea Reported feeling sick to the stomach ...          0.403267     2
+17      R017 Nausea Nauseous most mornings this cycle ...             0.129933     3
 2       R002 Nausea Subject felt queasy through the afternoon ...     0.115708     4
 ```
 
@@ -119,7 +119,7 @@ vignette("files-and-output")   # Excel sheets, delimited files, CSV output
 
 ```bash
 ci/test.sh                     # run the test suite
-ci/build-vignettes.sh          # rebuild the vignettes into doc/
+ci/build-vignettes.sh          # rebuild the vignettes into docs/articles/
 ci/check.sh                    # R CMD check --as-cran
 ```
 

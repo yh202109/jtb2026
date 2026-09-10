@@ -18,9 +18,8 @@ needed <- c(
     deps <- trimws(gsub("\\(.*\\)", "", deps))
     deps[nzchar(deps) & deps != "R"]
   }),
-  # Tooling that is not a package dependency. `remotes` is not declared by
-  # devtools but devtools::build_vignettes() asks for it at run time.
-  "roxygen2", "devtools", "remotes"
+  # Tooling that is not a package dependency.
+  "roxygen2", "pkgdown"
 )
 
 base_pkgs <- rownames(installed.packages(priority = "base"))
