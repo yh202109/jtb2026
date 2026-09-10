@@ -5,16 +5,21 @@
 # sources, so this is also a check: if an example stops working, the build
 # fails rather than leaving stale output on the page.
 #
-# Output lands in docs/articles/, which is gitignored and Rbuildignored. These
-# are read-and-review copies. The versions that ship in the package are
-# rendered separately by `R CMD build` into inst/doc, which ci/check.sh
-# exercises -- so a broken example fails the check as well as this script.
+# Output lands in docs/articles/. docs/ is committed and is what
+# .github/workflows/static.yml publishes to GitHub Pages, so rebuilding here
+# is what updates the published articles. The copies that ship inside the
+# package are rendered separately by `R CMD build` into inst/doc, which
+# ci/check.sh exercises -- so a broken example fails the check too.
+#
+# This rebuilds the articles only. Use --site after changing README.md,
+# NEWS.md or anything under man/, which feed the rest of the site.
 #
 # (This replaces devtools::build_vignettes(), which devtools deprecated in
 # 2.5.0 for leaving build artefacts in the development directory.)
 #
 # Usage:
-#   ci/build-vignettes.sh          # build to docs/articles/
+#   ci/build-vignettes.sh          # build the articles into docs/articles/
+#   ci/build-vignettes.sh --site   # rebuild the whole pkgdown site
 #   ci/build-vignettes.sh --clean  # discard the previous build first
 
 set -euo pipefail
@@ -32,8 +37,13 @@ if [[ "${1:-}" == "--clean" ]]; then
   rm -rf docs
 fi
 
-echo "==> pkgdown::build_articles()"
-Rscript -e 'pkgdown::build_articles(pkg = ".")'
+if [[ "${1:-}" == "--site" ]]; then
+  echo "==> pkgdown::build_site()"
+  Rscript -e 'pkgdown::build_site(pkg = ".", preview = FALSE)'
+else
+  echo "==> pkgdown::build_articles()"
+  Rscript -e 'pkgdown::build_articles(pkg = ".")'
+fi
 
 BUILT=$(find docs/articles -name '*.html' ! -name 'index.html' 2>/dev/null |
           wc -l | tr -d ' ')

@@ -120,11 +120,12 @@ vignette("files-and-output")   # Excel sheets, delimited files, CSV output
 ```bash
 ci/test.sh                     # run the test suite
 ci/build-vignettes.sh          # rebuild the vignettes into docs/articles/
+ci/build-vignettes.sh --site   # rebuild the whole pkgdown site
 ci/check.sh                    # R CMD check --as-cran
 ```
 
-See [`ci/README.md`](ci/README.md) for what each script does and which workflow
-runs it.
+See [`ci/README.md`](https://github.com/yh202109/jtb2026/blob/main/ci/README.md)
+for what each script does and which workflow runs it.
 
 ## License
 

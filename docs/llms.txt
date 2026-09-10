@@ -1,0 +1,163 @@
+# jtb2026
+
+Find the rows of a table that mention what you are looking for.
+
+Hand `jtb2026` an Excel workbook, a delimited file or a data frame, tell
+it which columns to read and what to look for, and it returns the
+matching rows — optionally writing them to a CSV on the way out.
+
+Two functions, asking two different questions:
+
+|  | [`jtb_search_keyword()`](https://yh202109.github.io/jtb2026/reference/jtb_search_keyword.md) | [`jtb_search_semantic()`](https://yh202109.github.io/jtb2026/reference/jtb_search_semantic.md) |
+|----|----|----|
+| Asks | *Does this row contain the word?* | *How close is this row to the idea?* |
+| Returns | Every match, in the original row order | The best matches, ranked, with a score |
+| Finds `"nauseous"` when you search `"stomach upset"` | No | Yes |
+| Reproducible, offline, no model | Yes | Yes |
+
+## Installation
+
+``` r
+
+# install.packages("remotes")
+remotes::install_github("yh202109/jtb2026", build_vignettes = FALSE)
+```
+
+Reading `.xlsx` files needs `readxl`, which is a suggested dependency:
+
+``` r
+
+install.packages("readxl")
+```
+
+## Usage
+
+``` r
+
+library(jtb2026)
+```
+
+The package ships `site_reports`, twenty-four invented rows of
+study-site comments, used throughout the documentation.
+
+### Keyword search
+
+Every row containing the term, in the original order:
+
+``` r
+
+jtb_search_keyword(site_reports, "headache", columns = c("term", "comment"))
+```
+
+       report_id    site subject   visit     term  comment ...
+    1       R001  Boston  S-1001  Week 2 Headache  Subject reported a dull headache ...
+    5       R005  Denver  S-2001  Week 2 Headache  Persistent head pain over three days ...
+    14      R014   Osaka  S-4002  Week 4 Headache  Mild headche noted in the diary ...
+    21      R021 Nairobi  S-6001  Week 2 Headache  Sharp pain across the forehead ...
+
+`columns` takes names, 1-based positions (`c(5, 6)`) or a logical mask.
+Other arguments: `ignore_case`, `whole_word`, `regex`, several keywords
+at once with `match = "any" | "all"`, and `add_match_info` to record
+which column matched.
+
+### Semantic search
+
+Nobody in the table wrote “stomach upset”. All four nausea rows come
+back anyway, ranked:
+
+``` r
+
+jtb_search_semantic(site_reports, "stomach upset", columns = "comment", top_n = 4)
+```
+
+       report_id   term comment                                            .score .rank
+    9       R009 Nausea Stomach felt unsettled after each dose ...        0.533332     1
+    24      R024 Nausea Reported feeling sick to the stomach ...          0.403267     2
+    17      R017 Nausea Nauseous most mornings this cycle ...             0.129933     3
+    2       R002 Nausea Subject felt queasy through the afternoon ...     0.115708     4
+
+The score blends TF-IDF cosine similarity over stemmed, synonym-expanded
+tokens with a fuzzy character-3-gram similarity — no model, no network,
+same answer every time. Supply `synonyms` to teach it your vocabulary,
+or `embed_fun` to hand the scoring to a real embedding model.
+
+### Writing results out
+
+Both functions take `output_csv`, and write exactly what they return:
+
+``` r
+
+jtb_search_keyword("reports.xlsx", "headache",
+                   columns = c("term", "comment"),
+                   output_csv = "headache_rows.csv")
+```
+
+## Documentation
+
+See git page.
+
+TO install with local vignette,
+
+``` r
+
+remotes::install_github("yh202109/jtb2026", build_vignettes = TRUE)
+```
+
+Four vignettes, all of them executed at build time against the package:
+
+``` r
+
+vignette("jtb2026")            # get started
+vignette("keyword-search")
+vignette("semantic-search")
+vignette("files-and-output")   # Excel sheets, delimited files, CSV output
+```
+
+## Development
+
+``` bash
+ci/test.sh                     # run the test suite
+ci/build-vignettes.sh          # rebuild the vignettes into docs/articles/
+ci/build-vignettes.sh --site   # rebuild the whole pkgdown site
+ci/check.sh                    # R CMD check --as-cran
+```
+
+See
+[`ci/README.md`](https://github.com/yh202109/jtb2026/blob/main/ci/README.md)
+for what each script does and which workflow runs it.
+
+## License
+
+MIT. See [LICENSE.md](https://yh202109.github.io/jtb2026/LICENSE.md).
+
+# Package index
+
+## All functions
+
+- [`jtb_read_table()`](https://yh202109.github.io/jtb2026/reference/jtb_read_table.md)
+  : Read a table from a file or accept one already in memory
+- [`jtb_search_keyword()`](https://yh202109.github.io/jtb2026/reference/jtb_search_keyword.md)
+  : Find rows containing a keyword
+- [`jtb_search_semantic()`](https://yh202109.github.io/jtb2026/reference/jtb_search_semantic.md)
+  : Rank rows by how closely they match a query in meaning
+- [`jtb_stopwords()`](https://yh202109.github.io/jtb2026/reference/jtb_stopwords.md)
+  : English stop words used by the semantic search
+- [`jtb_synonyms()`](https://yh202109.github.io/jtb2026/reference/jtb_synonyms.md)
+  : Default synonym groups for query expansion
+- [`jtb_tokenize()`](https://yh202109.github.io/jtb2026/reference/jtb_tokenize.md)
+  : Split text into normalised search tokens
+- [`site_reports`](https://yh202109.github.io/jtb2026/reference/site_reports.md)
+  : Mock study-site reports
+
+# Articles
+
+### All vignettes
+
+- [Files in, CSV
+  out](https://yh202109.github.io/jtb2026/articles/files-and-output.md):
+- [Get started with
+  jtb2026](https://yh202109.github.io/jtb2026/articles/jtb2026.md):
+- [Keyword
+  search](https://yh202109.github.io/jtb2026/articles/keyword-search.md):
+- [Semantic
+  search](https://yh202109.github.io/jtb2026/articles/semantic-search.md):

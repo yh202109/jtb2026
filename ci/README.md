@@ -9,14 +9,15 @@ reproduced locally by running the same script.
 | `install-deps.R` | Installs `Imports` and `Suggests` from `DESCRIPTION`, plus `roxygen2`. |
 | `document.sh` | Rebuilds `data/site_reports.rda` from `data-raw/`, then regenerates `man/` and `NAMESPACE`. |
 | `test.sh` | Installs the package into a temporary library and runs the testthat suite. Fast; use it while developing. |
-| `build-vignettes.sh` | Rebuilds the vignettes with `pkgdown::build_articles()`, writing them to `docs/articles/`. `--clean` discards the previous build first. |
+| `build-vignettes.sh` | Rebuilds the vignettes with `pkgdown::build_articles()`, writing them to `docs/articles/`. `--site` rebuilds the whole pkgdown site; `--clean` discards the previous build first. |
 | `check.sh` | `R CMD build` + `R CMD check --as-cran`. Fails on any note, warning or error, and fails if `man/` is stale. Builds the vignettes on the way through. |
 
 Run them from anywhere; each one `cd`s to the package root.
 
 ```bash
 ci/test.sh                     # quickest useful signal
-ci/build-vignettes.sh          # rebuild the documentation into docs/articles/
+ci/build-vignettes.sh          # rebuild the articles into docs/articles/
+ci/build-vignettes.sh --site   # rebuild the whole site (after README/NEWS/man changes)
 ci/build-vignettes.sh --clean  # ... discarding the previous build first
 ci/check.sh                    # what the R-CMD-check workflow runs
 ```
@@ -31,9 +32,14 @@ are rendered independently into `inst/doc` by `R CMD build`.
 This replaces `devtools::build_vignettes()`, which devtools deprecated in 2.5.0
 for leaving build artefacts in the development directory.
 
+`docs/` is committed, not gitignored, because `static.yml` does no building —
+it publishes what is in the repository. So the published site is only as fresh
+as the last `ci/build-vignettes.sh` you committed. Nothing enforces that; if a
+vignette change lands without a rebuilt `docs/`, the site goes stale silently.
+
 ## Workflows
 
-`.github/workflows/` holds three:
+`.github/workflows/` holds four:
 
 - **test.yaml** — runs `ci/test.sh` on every push to any branch. The
   two-minute signal.
@@ -42,7 +48,13 @@ for leaving build artefacts in the development directory.
   artifact when a job fails, so you can read `00check.log` without rerunning.
 - **vignettes.yaml** — runs `ci/build-vignettes.sh` whenever the vignettes or
   anything they document changes, and uploads the rendered HTML as an artifact
-  so a reviewer can read the built pages straight from the run.
+  so a reviewer can read the built pages straight from the run. It does not
+  commit or deploy anything; it is there to catch a vignette that stopped
+  building.
+- **static.yml** — GitHub's stock "Deploy static content to Pages" workflow,
+  pointed at `docs/` instead of the whole repository. Runs on every push to
+  `main` and can be started by hand from the Actions tab. It needs Pages set to
+  build from GitHub Actions: **Settings → Pages → Source → GitHub Actions**.
 
 ## Why the documentation rebuild is part of CI
 

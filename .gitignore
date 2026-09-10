@@ -9,6 +9,5 @@ check/
 vignettes/*.html
 vignettes/*_files/
 vignettes/*_cache/
-docs/
 *.tar.gz
 *.Rcheck/

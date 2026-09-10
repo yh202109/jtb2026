@@ -1,5 +1,7 @@
-# Minimal pkgdown config. The site exists so the vignettes can be rendered and
-# read locally; Bootstrap 5 is set explicitly because pkgdown's default without
-# this field is the legacy Bootstrap 3 template.
+# The site deployed by .github/workflows/static.yml.
+url: https://yh202109.github.io/jtb2026/
+
+# Bootstrap 5; pkgdown's default without this field is the legacy Bootstrap 3
+# template.
 template:
   bootstrap: 5
