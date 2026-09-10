@@ -9,21 +9,25 @@ reproduced locally by running the same script.
 | `install-deps.R` | Installs `Imports` and `Suggests` from `DESCRIPTION`, plus `roxygen2`. |
 | `document.sh` | Rebuilds `data/site_reports.rda` from `data-raw/`, then regenerates `man/` and `NAMESPACE`. |
 | `test.sh` | Installs the package into a temporary library and runs the testthat suite. Fast; use it while developing. |
-| `build-vignettes.sh` | Rebuilds the vignettes and extracts the rendered HTML to `check/vignettes/`. `--local` renders in place instead, next to the `.Rmd` files. |
+| `build-vignettes.sh` | Rebuilds the vignettes with `devtools::build_vignettes()`, writing them to `doc/`. `--clean` clears `doc/` and `Meta/` first. |
 | `check.sh` | `R CMD build` + `R CMD check --as-cran`. Fails on any note, warning or error, and fails if `man/` is stale. Builds the vignettes on the way through. |
 
 Run them from anywhere; each one `cd`s to the package root.
 
 ```bash
 ci/test.sh                     # quickest useful signal
-ci/build-vignettes.sh          # rebuild the documentation
-ci/build-vignettes.sh --local  # ... leaving the HTML next to the .Rmd files
+ci/build-vignettes.sh          # rebuild the documentation into doc/
+ci/build-vignettes.sh --clean  # ... discarding the previous build first
 ci/check.sh                    # what the R-CMD-check workflow runs
 ```
 
 The vignettes are plain `.Rmd` files built by the standard `knitr::rmarkdown`
-engine, so `knitr` and `rmarkdown` are the only extra packages needed — no
-external toolchain.
+engine — no external toolchain. `build-vignettes.sh` drives them through
+`devtools::build_vignettes()`, which renders against the package sources and
+writes to `doc/` (plus `Meta/vignette.rds`), so `vignette("jtb2026")` works
+during development without installing. Both directories are gitignored and
+Rbuildignored; the copies that ship are rendered again into `inst/doc` by
+`R CMD build`.
 
 ## Workflows
 

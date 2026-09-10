@@ -119,7 +119,7 @@ vignette("files-and-output")   # Excel sheets, delimited files, CSV output
 
 ```bash
 ci/test.sh                     # run the test suite
-ci/build-vignettes.sh          # rebuild the documentation
+ci/build-vignettes.sh          # rebuild the vignettes into doc/
 ci/check.sh                    # R CMD check --as-cran
 ```
 

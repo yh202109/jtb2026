@@ -43,6 +43,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          extra-packages: any::devtools, any::remotes
           needs: check
 
       # Every code block in vignettes/*.Rmd runs against the freshly built
@@ -55,5 +56,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vignettes-html
-          path: check/vignettes
+          path: doc
           retention-days: 14
