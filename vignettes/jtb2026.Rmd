@@ -1,0 +1,178 @@
+---
+title: "Get started with jtb2026"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{Get started with jtb2026}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 92)
+```
+
+> Find the rows of a table that mention what you are looking for.
+
+`jtb2026` does one thing: you hand it a table and a word, and it hands back the
+rows that mention it. The table can be an Excel workbook, a CSV, or a data
+frame you already have; the answer can be returned to R, written to a CSV, or
+both.
+
+There are two ways to ask the question, and the difference between them is the
+whole point of the package:
+
+| | `jtb_search_keyword()` | `jtb_search_semantic()` |
+| --- | --- | --- |
+| Asks | *Does this row contain the word?* | *How close is this row to the idea?* |
+| Returns | Every match, in the original row order | The best matches, ranked, with a score |
+| Finds `"nauseous"` when you search `"stomach upset"` | No | Yes |
+| Reproducible, offline, no model | Yes | Yes |
+
+Each has a vignette of its own:
+`vignette("keyword-search")`, `vignette("semantic-search")` and
+`vignette("files-and-output")`.
+
+## Install
+
+```r
+# install.packages("remotes")
+remotes::install_github("yh202109/jtb2026", build_vignettes = TRUE)
+```
+
+```{r}
+library(jtb2026)
+```
+
+## The mock table
+
+The package ships `site_reports`, twenty-four invented rows of study-site
+comments. Everything in these vignettes is computed against it. The `comment`
+column is the interesting one — it is free text, written by different people
+who described the same things in different words.
+
+```{r mock-table}
+str(site_reports)
+```
+
+```{r mock-head}
+head(site_reports[, c("report_id", "site", "term", "comment")], 5)
+```
+
+## Sixty-second tour
+
+### Find rows containing a word
+
+```{r tour-keyword}
+hits <- jtb_search_keyword(site_reports, "headache",
+                           columns = c("term", "comment"))
+hits[, c("report_id", "term", "comment")]
+```
+
+Four rows, in the order they appear in the table. Note the row names — `1`,
+`5`, `14`, `21` — they are the positions in the input, so you can always trace
+a result back.
+
+### Find rows that *mean* something
+
+Nobody in this table wrote "stomach upset". The keyword search says so:
+
+```{r tour-keyword-miss}
+nrow(jtb_search_keyword(site_reports, "stomach upset", columns = "comment"))
+```
+
+The semantic search finds all four nausea rows anyway, ranked:
+
+```{r tour-semantic}
+ranked <- jtb_search_semantic(site_reports, "stomach upset",
+                              columns = "comment", top_n = 4)
+ranked[, c("report_id", "term", "comment", ".score")]
+```
+
+`R009` mentions the stomach directly and scores highest. `R002` only says
+"queasy" and scores lowest. The ordering is the useful part: it is a ranking,
+not a yes/no.
+
+### Write the answer to a CSV
+
+Both functions take `output_csv`. The file gets exactly what the function
+returns.
+
+```{r tour-csv}
+out <- file.path(tempdir(), "headache_rows.csv")
+
+hits <- jtb_search_keyword(site_reports, "headache", output_csv = out)
+
+nrow(hits)
+readLines(out, n = 2)
+```
+
+```{r tour-csv-cleanup, include=FALSE}
+unlink(out)
+```
+
+## Which columns get searched
+
+Both functions take `columns`, and it accepts three shapes. All three of these
+search the same two columns:
+
+```{r columns}
+by_name <- jtb_search_keyword(site_reports, "Nausea",
+                              columns = c("term", "comment"))
+by_position <- jtb_search_keyword(site_reports, "Nausea", columns = c(5, 6))
+
+mask <- names(site_reports) %in% c("term", "comment")
+by_mask <- jtb_search_keyword(site_reports, "Nausea", columns = mask)
+
+identical(by_name, by_position)
+identical(by_name, by_mask)
+```
+
+Positions are 1-based and refer to the columns of the table as read, so
+`columns = c(5, 6)` is the fifth and sixth column. Leaving `columns` out
+searches everything — convenient, but it means an identifier column can match
+by accident:
+
+```{r columns-all}
+# "R002" is a report id, not a comment; searching every column finds it.
+jtb_search_keyword(site_reports, "R002")[, c("report_id", "term")]
+```
+
+## Which one should you use?
+
+Reach for `jtb_search_keyword()` when you know the exact string — a subject id,
+a coded term, a site name — and you need *every* row that contains it. It is
+exhaustive and its answer does not depend on any tuning.
+
+Reach for `jtb_search_semantic()` when you are searching free text for an idea
+and you do not know how the writer phrased it. It returns a ranked shortlist,
+so treat it as triage: read the top of the list, not the whole thing.
+
+A practical pattern is to use both. Rank first to find the vocabulary people
+actually used, then keyword-search that vocabulary to get the complete set:
+
+```{r combined}
+shortlist <- jtb_search_semantic(site_reports, "stomach upset",
+                                 columns = "comment", top_n = 5)
+shortlist$comment
+
+# Having read those, the words worth an exhaustive search are clear.
+complete <- jtb_search_keyword(site_reports,
+                               c("queasy", "nauseous", "stomach", "vomited"),
+                               columns = "comment")
+complete[, c("report_id", "comment")]
+```
+
+## Where to go next
+
+- `vignette("keyword-search")` — whole words, case, regular expressions,
+  several keywords at once, and knowing which column matched.
+- `vignette("semantic-search")` — what the score actually measures, how to
+  teach it your vocabulary, and how to plug in a real embedding model.
+- `vignette("files-and-output")` — Excel sheets, delimited files, and what
+  lands in the output CSV.
+- `?jtb_search_keyword`, `?jtb_search_semantic` — every argument, in full.

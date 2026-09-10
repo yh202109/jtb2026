@@ -1,0 +1,180 @@
+---
+title: "Files in, CSV out"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{Files in, CSV out}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 92)
+```
+
+> Excel workbooks, delimited files, and what lands in the output.
+
+```{r}
+library(jtb2026)
+```
+
+Both search functions take their `data` argument straight to
+`jtb_read_table()`, so anything that reads works in either. Nothing about the
+search changes with the input type — a path is simply a table you have not
+loaded yet.
+
+## What `data` accepts
+
+| `data` | What happens |
+| --- | --- |
+| A `data.frame`, tibble or `data.table` | Used as-is |
+| A matrix | Converted column-wise to a data frame |
+| `"file.xlsx"`, `.xlsm`, `.xls` | `readxl::read_excel()`, honouring `sheet` |
+| `"file.csv"` | `utils::read.csv()` |
+| `"file.tsv"`, `"file.txt"` | `utils::read.delim()` |
+| Anything else | An error naming the extensions that do work |
+
+The package ships the mock table in both formats, so the examples below are
+runnable:
+
+```{r extdata}
+xlsx <- system.file("extdata", "site_reports.xlsx", package = "jtb2026")
+csv <- system.file("extdata", "site_reports.csv", package = "jtb2026")
+
+basename(c(xlsx, csv))
+```
+
+## Searching an Excel workbook
+
+```{r excel}
+jtb_search_keyword(xlsx, "hives", columns = "comment")[
+  , c("report_id", "site", "comment")]
+```
+
+Reading Excel needs the `readxl` package, which is a suggested dependency
+rather than a hard one — the rest of `jtb2026` works without it, and asking for
+an `.xlsx` without it produces an error that says exactly what to install.
+
+### Choosing a worksheet
+
+`sheet` takes a name or a 1-based position and is passed through to `readxl`.
+It is ignored for every other input type, so it is harmless to leave in a
+script that later switches to CSV.
+
+```{r sheet, eval=FALSE}
+jtb_search_keyword("study.xlsx", "headache", sheet = "Adverse events")
+jtb_search_keyword("study.xlsx", "headache", sheet = 2)
+```
+
+Further arguments go to the reader too. That is how you skip a banner row above
+the real header, a common shape for exported workbooks:
+
+```{r skip, eval=FALSE}
+jtb_search_keyword("study.xlsx", "headache", sheet = 1, skip = 3)
+
+# The same idea for a delimited file, where the argument belongs to read.csv().
+jtb_search_keyword("export.csv", "headache", skip = 3, na.strings = c("", "NA"))
+```
+
+### Column positions and file input
+
+Positions refer to the columns **as read**, which is worth checking once when
+the file has a banner row or a stray index column:
+
+```{r positions}
+names(jtb_read_table(csv))[c(5, 6)]
+
+jtb_search_keyword(csv, "Nausea", columns = c(5, 6))$report_id
+```
+
+`jtb_read_table()` is exported precisely so you can look at what the search saw
+before trusting a positional selection.
+
+## Delimited files
+
+```{r csv-in}
+jtb_search_semantic(csv, "device malfunction",
+                    columns = c("term", "comment"), top_n = 3)[
+                      , c("report_id", "term", ".score")]
+```
+
+A CSV read this way goes through `utils::read.csv()`, so its type conversions
+apply — `report_date` arrives as text rather than a `Date`, for instance. That
+makes no difference to searching, which converts everything to text anyway, but
+it matters if you plan to do arithmetic on the result.
+
+```{r csv-types}
+class(jtb_read_table(csv)$report_date)
+class(site_reports$report_date)
+```
+
+## Writing the result out
+
+`output_csv` writes the returned rows with `utils::write.csv(row.names =
+FALSE)`. What you get in the file is what you get in R — including the score
+columns from a semantic search, and the reporting columns from
+`add_match_info = TRUE`.
+
+```{r csv-out}
+out <- file.path(tempdir(), "semantic_hits.csv")
+
+hits <- jtb_search_semantic(xlsx, "stomach upset", columns = "comment",
+                            top_n = 3, output_csv = out)
+
+names(hits)
+utils::read.csv(out)[, c("report_id", "comment", ".score", ".rank")]
+```
+
+The rows are written in the order they are returned, so a semantic result
+arrives in the file already ranked — `.rank` 1 is the first data row.
+
+If the target directory does not exist, the function stops **before** doing the
+search rather than working and then failing at the last step:
+
+```{r csv-out-error, error=TRUE}
+jtb_search_keyword(site_reports, "headache",
+                   output_csv = file.path(tempdir(), "nope", "hits.csv"))
+```
+
+```{r cleanup, include=FALSE}
+unlink(out)
+```
+
+## Round trip
+
+Nothing stops you writing the result of one search and searching it again — a
+practical way to narrow a large export in two passes without holding the whole
+thing in memory twice.
+
+```{r round-trip}
+step1 <- file.path(tempdir(), "boston.csv")
+
+jtb_search_keyword(csv, "Boston", columns = "site", output_csv = step1)
+
+jtb_search_semantic(step1, "head pain", columns = "comment", top_n = 2)[
+  , c("report_id", "site", "comment", ".score")]
+```
+
+```{r round-trip-cleanup, include=FALSE}
+unlink(step1)
+```
+
+## Errors worth recognising
+
+```{r errors, error=TRUE}
+jtb_search_keyword("no-such-file.csv", "headache")
+```
+
+```{r errors-2, error=TRUE}
+jtb_search_keyword(site_reports, "headache", columns = "commnet")
+```
+
+```{r errors-3, error=TRUE}
+jtb_search_keyword(site_reports, "headache", columns = 99)
+```
+
+Each one names the problem and, where it can, what the valid options were.

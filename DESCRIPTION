@@ -1,0 +1,35 @@
+Package: jtb2026
+Title: Keyword and Semantic Search Over Tabular Data
+Version: 0.1.0
+Authors@R:
+    person("yh202109", , , "yh202109@google.com", role = c("aut", "cre"))
+Description: Find the rows of a table that mention something. Reads an
+    Excel workbook, a delimited file, or an in-memory data frame, then
+    returns the subset of rows whose selected columns match a search term.
+    Two matchers are provided: an exact/regular-expression keyword search,
+    and a scoring semantic search that ranks rows by TF-IDF cosine
+    similarity with optional synonym expansion, fuzzy character n-gram
+    matching, or a user-supplied embedding function. Either search can
+    write its result straight to a CSV file.
+License: MIT + file LICENSE
+URL: https://github.com/yh202109/jtb2026
+BugReports: https://github.com/yh202109/jtb2026/issues
+Depends:
+    R (>= 4.1)
+Imports:
+    tools,
+    utils
+Suggests:
+    knitr,
+    rmarkdown,
+    readxl,
+    SnowballC,
+    testthat (>= 3.0.0),
+    withr,
+    writexl
+VignetteBuilder: knitr
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

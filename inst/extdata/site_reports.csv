@@ -1,0 +1,25 @@
+"report_id","site","subject","visit","term","comment","severity","outcome","report_date"
+"R001","Boston","S-1001","Week 2","Headache","Subject reported a dull headache starting two hours after the morning dose; resolved without treatment.","Mild","Recovered",2026-01-06
+"R002","Boston","S-1002","Week 2","Nausea","Subject felt queasy through the afternoon and skipped the evening meal.","Moderate","Recovered",2026-01-07
+"R003","Boston","S-1003","Week 4","Fatigue","Reported feeling unusually tired all week and needing an extra nap each day.","Mild","Ongoing",2026-01-21
+"R004","Boston","S-1004","Week 8","Rash","Small itchy patch on the left forearm, no spreading noted at review.","Mild","Recovered",2026-02-18
+"R005","Denver","S-2001","Week 2","Headache","Persistent head pain over three days, described as pressure behind the eyes.","Moderate","Recovered",2026-01-09
+"R006","Denver","S-2002","Week 4","Dizziness","Felt lightheaded on standing at the clinic; blood pressure within range.","Mild","Recovered",2026-01-23
+"R007","Denver","S-2003","Week 4","Device issue","The injector pen jammed midway and the dose could not be completed.","Moderate","Resolved with replacement",2026-01-24
+"R008","Denver","S-2004","Week 12","Injection site reaction","Redness and mild swelling around the injection site, faded within 48 hours.","Mild","Recovered",2026-03-21
+"R009","Lisbon","S-3001","Week 1","Nausea","Stomach felt unsettled after each dose and the subject vomited once on Day 9.","Moderate","Recovered",2026-01-08
+"R010","Lisbon","S-3002","Week 2","Pyrexia","Temperature of 38.4C recorded at the visit, chills reported the night before.","Moderate","Recovered",2026-01-15
+"R011","Lisbon","S-3003","Week 6","Device issue","Autoinjector battery died before the scheduled dose; a replacement was shipped.","Moderate","Resolved with replacement",2026-02-13
+"R012","Lisbon","S-3004","Week 8","Fatigue","Low energy since the last visit, difficulty completing the daily walk.","Mild","Ongoing",2026-02-27
+"R013","Osaka","S-4001","Week 2","Dizziness","Room seemed to spin briefly when getting out of bed, lasted under a minute.","Mild","Recovered",2026-01-11
+"R014","Osaka","S-4002","Week 4","Headache","Mild headche noted in the diary, no medication taken.","Mild","Recovered",2026-01-25
+"R015","Osaka","S-4003","Week 6","Rash","Widespread hives across the trunk, antihistamine given by the site nurse.","Severe","Recovered",2026-02-08
+"R016","Osaka","S-4004","Week 12","Protocol deviation","Dose was administered 40 minutes outside the protocol window.","Mild","Not applicable",2026-03-26
+"R017","Toronto","S-5001","Week 1","Nausea","Nauseous most mornings this cycle, improving by midday.","Moderate","Ongoing",2026-01-07
+"R018","Toronto","S-5002","Week 4","Dyspnoea","Short of breath climbing one flight of stairs, resolved after resting.","Moderate","Recovered",2026-01-26
+"R019","Toronto","S-5003","Week 8","Device issue","Pump display froze and no dose confirmation was shown to the subject.","Moderate","Resolved with replacement",2026-02-22
+"R020","Toronto","S-5004","Week 8","Fatigue","Exhausted after routine activity, sleeping longer than usual.","Moderate","Ongoing",2026-02-26
+"R021","Nairobi","S-6001","Week 2","Headache","Sharp pain across the forehead, subject took paracetamol with relief.","Moderate","Recovered",2026-01-12
+"R022","Nairobi","S-6002","Week 4","Injection site reaction","Tender bruise at the injection site that lasted about four days.","Mild","Recovered",2026-01-27
+"R023","Nairobi","S-6003","Week 6","Protocol deviation","Study visit occurred eight days late because of travel disruption.","Mild","Not applicable",2026-02-10
+"R024","Nairobi","S-6004","Week 12","Nausea","Reported feeling sick to the stomach for an hour after dosing.","Mild","Recovered",2026-03-24

@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+.DS_Store
+.quarto/
+/doc/
+/Meta/
+check/
+vignettes/*.html
+vignettes/*_files/
+vignettes/*_cache/
+docs/
+*.tar.gz
+*.Rcheck/

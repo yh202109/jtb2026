@@ -1,0 +1,13 @@
+^ci$
+^data-raw$
+^\.github$
+^\.git$
+^LICENSE\.md$
+^README\.Rmd$
+^check$
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.quarto$
+^vignettes/.*\.html$
+^vignettes/.*_files$
+^vignettes/.*_cache$

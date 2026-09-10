@@ -1,0 +1,59 @@
+name: vignettes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'vignettes/**'
+      - 'R/**'
+      - 'data/**'
+      - 'inst/extdata/**'
+      - 'DESCRIPTION'
+      - 'ci/build-vignettes.sh'
+      - '.github/workflows/vignettes.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'vignettes/**'
+      - 'R/**'
+      - 'data/**'
+      - 'DESCRIPTION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vignettes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Rebuild the vignettes
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+
+      # Every code block in vignettes/*.Rmd runs against the freshly built
+      # package, so this step fails if any documented example has gone stale.
+      - name: Build the vignettes
+        run: ci/build-vignettes.sh
+
+      - name: Upload the rendered vignettes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vignettes-html
+          path: check/vignettes
+          retention-days: 14

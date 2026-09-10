@@ -1,0 +1,193 @@
+---
+title: "Keyword search"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{Keyword search}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 92)
+```
+
+> Exhaustive, literal matching over the columns you choose.
+
+```{r}
+library(jtb2026)
+```
+
+`jtb_search_keyword()` returns every row whose selected columns contain the
+term. Nothing is scored and nothing is reordered — the result is a subset of
+the input, in the input's order, with the input's row names. That makes it the
+right tool when you need completeness and traceability.
+
+```{r basic}
+hits <- jtb_search_keyword(site_reports, "headache", columns = "comment")
+hits[, c("report_id", "comment")]
+```
+
+One row. Three other rows in this table are also headaches — their coded `term`
+says so — but their comments say "head pain", "headche" and "Sharp pain across
+the forehead". A literal search cannot know that any of those is the same
+thing, and it is not pretending otherwise. That gap is what
+`vignette("semantic-search")` is for.
+
+## Case
+
+Matching ignores case by default. Turn that off when the casing carries
+meaning, such as a coded term or an identifier.
+
+```{r case}
+nrow(jtb_search_keyword(site_reports, "HEADACHE"))
+nrow(jtb_search_keyword(site_reports, "HEADACHE", ignore_case = FALSE))
+```
+
+## Whole words
+
+By default a keyword matches anywhere inside a value, so `"ache"` matches
+`"headache"`. `whole_word = TRUE` requires word boundaries on both sides.
+
+```{r whole-word}
+jtb_search_keyword(site_reports, "ache", columns = "comment")$report_id
+
+nrow(jtb_search_keyword(site_reports, "ache", columns = "comment",
+                        whole_word = TRUE))
+```
+
+This matters most for short keywords and for identifiers that are prefixes of
+one another.
+
+## Keywords are literal, not patterns
+
+Punctuation in a keyword is searched for, not interpreted. There is no need to
+escape anything.
+
+```{r literal}
+doses <- data.frame(
+  id = c("D1", "D2", "D3"),
+  note = c("dose (2 mg) given", "dose 2 mg given", "wrote the c++ parser"),
+  stringsAsFactors = FALSE
+)
+
+jtb_search_keyword(doses, "dose (2 mg)")
+jtb_search_keyword(doses, "c++")
+```
+
+Set `regex = TRUE` when you do want a pattern. The keyword is then passed
+through as a PCRE regular expression, and `whole_word` is ignored — write the
+anchors yourself.
+
+```{r regex}
+jtb_search_keyword(doses, "dose [(]?[0-9]+ mg", regex = TRUE)
+
+# Anything ending in a unit of mass.
+jtb_search_keyword(doses, "\\d+ (mg|kg)\\b", regex = TRUE)$id
+```
+
+## Several keywords at once
+
+Pass a character vector. `match = "any"`, the default, keeps rows matching at
+least one keyword; `match = "all"` keeps rows matching every one.
+
+```{r multiple-any}
+jtb_search_keyword(site_reports, c("nausea", "fatigue"),
+                   columns = "term")[, c("report_id", "term")]
+```
+
+Under `match = "all"` the keywords may land in *different* columns of the same
+row, which is what makes it useful for narrowing:
+
+```{r multiple-all}
+jtb_search_keyword(site_reports, c("Boston", "Headache"),
+                   match = "all")[, c("report_id", "site", "term")]
+```
+
+Asking for two keywords that never co-occur returns an empty table rather than
+an error:
+
+```{r multiple-all-empty}
+nrow(jtb_search_keyword(site_reports, c("nausea", "fatigue"),
+                        columns = "term", match = "all"))
+```
+
+## Knowing where the match was
+
+With `add_match_info = TRUE` the result gains two reporting columns:
+`.matched_columns` and `.matched_keywords`. Useful when you searched several
+columns and want to know whether a hit came from the coded term or from someone's
+free text.
+
+```{r match-info}
+jtb_search_keyword(site_reports, "headache", add_match_info = TRUE)[
+  , c("report_id", "term", ".matched_columns")]
+```
+
+Only `R001` matched in both places. The other three matched the coded term
+alone, because their comments say "head pain", "headche" and "Sharp pain across
+the forehead" — three ways of writing a headache, none of them the word.
+
+## Nothing found
+
+A search with no matches returns a zero-row data frame with the original
+columns. Downstream code can carry on without a special case.
+
+```{r empty}
+none <- jtb_search_keyword(site_reports, "unobtainium")
+nrow(none)
+names(none)
+```
+
+## What the call did
+
+Every result carries a `jtb_search` attribute recording how it was produced.
+Handy for logging, and for writing down in a report what was actually run.
+
+```{r attribute}
+str(attr(hits, "jtb_search"))
+```
+
+## Missing values
+
+Empty cells are treated as empty text. An `NA` is never searchable as the
+literal string `"NA"`, so a missing value cannot be mistaken for a match.
+
+```{r missing}
+partial <- data.frame(
+  a = c("headache", NA),
+  b = c(NA, "nausea"),
+  stringsAsFactors = FALSE
+)
+
+nrow(jtb_search_keyword(partial, "headache"))
+nrow(jtb_search_keyword(partial, "NA", ignore_case = FALSE))
+```
+
+## Writing the result out
+
+`output_csv` writes exactly what is returned, including the reporting columns
+when you asked for them. The directory has to exist; the function stops before
+searching if it does not, rather than doing the work and then failing.
+
+```{r csv}
+out <- file.path(tempdir(), "keyword_hits.csv")
+
+result <- jtb_search_keyword(site_reports, "headache",
+                             columns = c("term", "comment"),
+                             add_match_info = TRUE,
+                             output_csv = out)
+
+utils::read.csv(out)[, c("report_id", "term", ".matched_columns")]
+```
+
+```{r csv-cleanup, include=FALSE}
+unlink(out)
+```
+
+See `vignette("files-and-output")` for reading Excel workbooks and delimited
+files, and `?jtb_search_keyword` for the complete argument list.

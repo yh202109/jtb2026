@@ -1,0 +1,254 @@
+---
+title: "Semantic search"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{Semantic search}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 92)
+```
+
+> Ranking rows by how close they are to an idea.
+
+```{r}
+library(jtb2026)
+```
+
+`jtb_search_semantic()` asks a different question from the keyword search: not
+*does this row contain the word*, but *how close is this row to the idea*. It
+returns rows sorted best-first with a `.score` column, so the result is a
+shortlist to read rather than a set to trust wholesale.
+
+```{r motivating}
+jtb_search_semantic(site_reports, "stomach upset",
+                    columns = "comment", top_n = 4)[
+                      , c("report_id", "comment", ".score")]
+```
+
+None of those rows contains the phrase "stomach upset". Two do not even contain
+the word "stomach".
+
+## How the score is computed
+
+There is no neural network here by default. The score is a blend of two
+classical similarities, which is what keeps the function offline, fast and
+deterministic — the same call gives the same answer next year.
+
+### 1. Token similarity (75% of the score)
+
+The query and every row are put through `jtb_tokenize()`: lower-cased, split on
+punctuation, stripped of stop words, then stemmed so word endings stop
+mattering.
+
+```{r tokenize}
+jtb_tokenize("Subject reported a severe HEADACHE after dosing.")
+```
+
+Compare that with the unstemmed version to see what the stemmer is doing:
+
+```{r tokenize-nostem}
+jtb_tokenize("Subject reported a severe HEADACHE after dosing.", stem = FALSE)
+```
+
+The tokens are then compared by **TF-IDF cosine similarity**. The IDF half is
+what makes this better than counting shared words: a term that appears in
+nearly every row carries almost no weight, while a rare term carries a lot. In
+this table "subject" is nearly worthless and "autoinjector" is decisive.
+
+Before the comparison, the query is expanded through a thesaurus. A query word
+belonging to a synonym group brings in the rest of that group at
+`synonym_weight` (0.6 by default, so a synonym counts for rather less than a
+word you actually typed). That expansion is what carries "stomach" across to
+"queasy":
+
+```{r synonyms}
+jtb_synonyms()$nausea
+```
+
+### 2. Fuzzy similarity (25% of the score)
+
+The same cosine, computed over character 3-grams instead of words. This is the
+half that survives a typo, an unusual plural or a word ending the stemmer did
+not anticipate.
+
+Row `R014` in the mock table misspells its own subject: *"Mild headche noted in
+the diary"*. A correctly spelled query still reaches it.
+
+```{r fuzzy}
+fuzzy <- jtb_search_semantic(site_reports, "headache", columns = "comment",
+                             top_n = NULL, min_score = 0.01)
+fuzzy[, c("report_id", "comment", ".score")]
+```
+
+Turn the fuzzy half off and the misspelled row disappears:
+
+```{r fuzzy-off}
+jtb_search_semantic(site_reports, "headache", columns = "comment",
+                    weights = c(token = 1, ngram = 0),
+                    top_n = NULL, min_score = 0.01)$report_id
+```
+
+### Reading the score
+
+`.score` runs from 0 to 1 and is **comparable within one call only**. IDF
+depends on the table being searched, so a 0.4 here and a 0.4 against a
+different table do not mean the same thing. Use the ranking, and use
+`min_score` as a cut-off you tune by looking at results — not as an absolute
+quality bar.
+
+## Controlling how much comes back
+
+`top_n` caps the number of rows; `min_score` drops weak ones. Both apply, and
+`top_n = NULL` means "no cap".
+
+```{r trimming}
+# The default: at most the ten best rows, each scoring at least 0.05.
+nrow(jtb_search_semantic(site_reports, "tired", columns = "comment"))
+
+# Everything, scored, in rank order.
+all_rows <- jtb_search_semantic(site_reports, "tired", columns = "comment",
+                                top_n = NULL, min_score = 0)
+nrow(all_rows)
+head(all_rows$.score, 8)
+
+# Only strong matches, however many that is.
+jtb_search_semantic(site_reports, "tired", columns = "comment",
+                    top_n = NULL, min_score = 0.2)[, c("report_id", "comment")]
+```
+
+`add_score = FALSE` leaves the input columns untouched if you want the rows
+without the two extra columns.
+
+## Teaching it your vocabulary
+
+The built-in thesaurus is a small starter set. It will not know your domain,
+and the honest failure mode is a query that returns nothing:
+
+```{r miss}
+nrow(jtb_search_semantic(site_reports, "skin irritation", columns = "comment"))
+```
+
+Neither "skin" nor "irritation" appears in the table, and neither is in a
+default synonym group, so there is nothing to match on. Supply a group and the
+same query works:
+
+```{r custom-synonyms}
+skin_terms <- list(
+  skin = c("skin", "irritation", "irritated", "rash", "hives", "urticaria",
+           "itchy", "itching", "patch", "redness", "swelling")
+)
+
+jtb_search_semantic(site_reports, "skin irritation", columns = "comment",
+                    synonyms = skin_terms, top_n = 4)[
+                      , c("report_id", "term", "comment", ".score")]
+```
+
+Your list is merged over the defaults **by group name**, so adding a group
+keeps everything else working, and reusing a default name replaces that group:
+
+```{r merge-semantics}
+# The nausea group is still in force alongside the new skin group.
+jtb_search_semantic(site_reports, "stomach upset", columns = "comment",
+                    synonyms = skin_terms, top_n = 2)$report_id
+```
+
+Pass `synonyms = NULL` to switch expansion off entirely. It is worth doing once
+on a real query, to see how much of the answer the thesaurus is responsible
+for:
+
+```{r no-synonyms}
+with_thesaurus <- jtb_search_semantic(site_reports, "exhausted and sleepy",
+                                      columns = "comment", top_n = 3)
+without <- jtb_search_semantic(site_reports, "exhausted and sleepy",
+                               columns = "comment", top_n = 3,
+                               synonyms = NULL)
+
+with_thesaurus[, c("report_id", "comment", ".score")]
+without[, c("report_id", "comment", ".score")]
+```
+
+Only one row literally says "exhausted"; the thesaurus is what brings in the
+row that says "unusually tired".
+
+## Other knobs
+
+```{r knobs, eval=FALSE}
+jtb_search_semantic(
+  site_reports, "device problem",
+  columns = c("term", "comment"),
+  weights = c(token = 0.9, ngram = 0.1),  # trust words more than spelling
+  synonym_weight = 0.8,                   # synonyms nearly as good as typed words
+  stopwords = character(),                # keep "no", "not", "off" ...
+  stem = FALSE                            # exact word forms only
+)
+```
+
+`stopwords = character()` is worth remembering. The default list contains
+`"no"` and `"not"`, so out of the box *"no rash reported"* and *"rash
+reported"* look alike. Pass an empty stop-word list when negation matters, and
+the negations survive into the comparison.
+
+## Using a real embedding model
+
+For genuine model-based semantics, pass `embed_fun`: any function that takes a
+character vector and returns a numeric matrix with one row per string. When it
+is supplied the two similarities above are skipped and the score becomes the
+cosine similarity between the query's embedding and each row's, rescaled to
+0–1.
+
+The shape of the contract is easiest to see with a toy embedding — one
+dimension per letter:
+
+```{r embed-toy}
+letter_counts <- function(x) {
+  t(vapply(strsplit(tolower(x), ""), function(ch) {
+    tabulate(match(ch, letters), nbins = 26L)
+  }, numeric(26)))
+}
+
+jtb_search_semantic(site_reports, "headache", columns = "comment",
+                    embed_fun = letter_counts, top_n = 3)[
+                      , c("report_id", "comment", ".score")]
+```
+
+Those results are nonsense, which is the point: the function does exactly what
+your embedding tells it to, and a bad embedding gives bad rankings. A real one
+looks the same from the package's side:
+
+```{r embed-real, eval=FALSE}
+# Sketch: replace with whichever embedding service or local model you use.
+embed <- function(x) {
+  vecs <- lapply(x, function(txt) my_embedding_api(txt))  # numeric vectors
+  do.call(rbind, vecs)
+}
+
+jtb_search_semantic("reports.xlsx", "device malfunction",
+                    columns = "comment", embed_fun = embed, top_n = 20)
+```
+
+Two things to keep in mind. The function is called **once** with the query
+followed by every row, so an API-backed embedding should batch internally and
+you should cache it if you search the same table repeatedly. And the result
+stops being reproducible: it is now only as stable as the model behind it.
+
+## What it will not do
+
+- It does not understand negation, sarcasm or quantity. "No headache" and
+  "severe headache" score similarly.
+- It has no idea what your abbreviations mean unless you put them in
+  `synonyms`.
+- Ranking is not retrieval. If you need *every* row that mentions a term —
+  for a count, an audit, a regulatory listing — use `jtb_search_keyword()`,
+  which is exhaustive by construction.
+
+A good working pattern is to rank first to learn the vocabulary, then
+keyword-search that vocabulary for the complete set. `vignette("jtb2026")`
+shows it end to end.
